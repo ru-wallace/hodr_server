@@ -1,0 +1,12 @@
+[Unit]
+Description=Hodr Server
+After=dbus.service network.target
+[Service]
+Environment=NODE_ENV=production
+WorkingDirectory=/home/ru/hodr_server
+Restart=always
+RestartSec=10
+ExecStart=/home/ru/.nvm/versions/node/v24.2.0/bin/node /home/ru/hodr_server/index.js
+
+[Install]
+WantedBy=default.target

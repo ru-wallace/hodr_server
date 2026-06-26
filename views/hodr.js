@@ -1030,6 +1030,31 @@ toggleWallclockButton.addEventListener('click', () => {
         .catch(error => console.error('Error changing wallclock acquisition status:', error));
 });
 
+fetch('get_wallclock_status')
+    .then(response => response.json())
+    .then(wallclockStatusResponse => {
+        console.log('Raw wallclock status data:', wallclockStatusResponse);
+        const wallclockActive = wallclockStatusResponse.wallclock_acquisition_active;
+        const wallclockInterval = wallclockStatusResponse.wallclock_interval;
+        console.log('Parsed wallclock status:', { wallclockActive, wallclockInterval });
+        if (typeof wallclockActive !== 'boolean' || isNaN(wallclockInterval) || wallclockInterval <= 0) {
+            console.error('Invalid wallclock status data:', wallclockStatusResponse);
+            return;
+        }
+        console.log('Current wallclock acquisition status:', { wallclockActive, wallclockInterval });
+        if (wallclockActive) {
+            wallclockStatusValue.textContent = 'On';
+            toggleWallclockButton.textContent = 'Stop';
+            nextAcquisitionTime.classList.remove('hidden');
+        } else {
+            wallclockStatusValue.textContent = 'Off';
+            toggleWallclockButton.textContent = 'Start';
+            nextAcquisitionTime.classList.add('hidden');
+        }
+        wallclockAcquisitionIntervalInput.value = wallclockInterval;
+        wallclockInterval.textContent = wallclockInterval;
+    })
+    .catch(error => console.error('Error fetching wallclock status data:', error));
 
 
 // Set integration time field text initial value

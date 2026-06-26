@@ -463,6 +463,36 @@ app.post('/set_target_temperature', verifyToken, async (req, res) => {
     }
 });
 
+app.get('/get_wallclock_interval', verifyToken, async (req, res) => {
+    if (!iface) {
+        res.status(500).send('Interface not set up. Please wait for the service to be ready.');
+        return;
+    }
+    try {
+        let wallclockInterval = await propsIface.Get(interfaceName, 'wallclockInterval');
+        console.log('Wallclock interval received:', wallclockInterval.value);
+        res.json({ wallclock_interval: wallclockInterval.value });
+    } catch (err) {
+        console.error('Error fetching wallclock interval:', err);
+        res.status(500).send('Error fetching wallclock interval');
+    }
+});
+
+app.get('/get_wallclock_status', verifyToken, async (req, res) => {
+    if (!iface) {
+        res.status(500).send('Interface not set up. Please wait for the service to be ready.');
+        return;
+    }
+    try {
+        let wallclockStatus = await propsIface.Get(interfaceName, 'wallclockAcquisitionActive');
+        console.log('Wallclock acquisition status received:', wallclockStatus.value);
+        res.json({ wallclock_acquisition_active: wallclockStatus.value });
+    } catch (err) {
+        console.error('Error fetching wallclock acquisition status:', err);
+        res.status(500).send('Error fetching wallclock acquisition status');
+    }
+});
+
 
 app.post('/set_wallclock_interval', verifyToken, async (req, res) => {
     if (!iface) {

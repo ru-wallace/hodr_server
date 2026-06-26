@@ -1,0 +1,60 @@
+@media screen and (max-width: 600px) {
+    body {
+        font-size: 14px;
+    }
+
+    #container {
+        flex-direction: column;
+    }
+
+    .output {
+        flex-direction: row;
+    }
+
+    .output .button {
+        min-height: none;
+        width: unset;
+    }
+
+    .number {
+        width: unset;
+        flex: 1 1 auto;
+        
+        padding-block: 0%;
+
+    }
+    .status {
+        min-height: 0;
+        width: unset;
+    }
+
+    .cycle {
+        min-height: min-content;
+        flex: 0 1 auto;
+        align-items: stretch;
+    }
+
+    .cycle .button {
+        width: 100%;
+        font-size: medium;
+        padding: 10px;
+        flex: 1 1 auto;
+    }
+
+    .cycle input {
+        width: 5%;
+        min-width: 50px;
+        font-size: medium;
+        
+        flex: 1 1 auto;
+    }
+    
+    .cycle label {
+        width: unset;
+        min-width: max-content;
+        padding: 0px;
+        padding-inline: 10px;
+        flex: 1 1 auto;
+        
+    }
+}

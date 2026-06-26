@@ -1,0 +1,30 @@
+doctype html
+html(lang="en")
+    head
+        meta(charset="UTF-8")
+        meta(name="viewport", content="width=device-width, initial-scale=1.0")
+        title Data
+        style
+            include data.css
+    body 
+        #data
+        script.
+            const dataContainer = document.getElementById('data');
+            //break data into lines and each line into spans by comma delimiter - alternating colours per column
+            var raw_data = `#{data}`;
+
+            var lines = raw_data.split('\n');
+            for (var i = 0; i < lines.length; i++) {
+                var line = lines[i];
+                var lineDiv = document.createElement('div');
+                dataContainer.appendChild(lineDiv);
+                var columns = line.split(',');
+                for (var j = 0; j < columns.length; j++) {
+                    var span = document.createElement('span');
+                    span.innerText = columns[j] + (j < columns.length - 1 ? ', ' : '');
+            
+                    lineDiv.appendChild(span);
+                }
+                
+            }
+            

@@ -184,6 +184,24 @@
             0 0 10px #ff0000;
         }
 
+        #links-container {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+            gap:20px;
+        }
+
+        #links-container a {
+            font-size: medium;
+            text-decoration: none;
+            color:#0099ad;
+        }
+
+        #links-container a.logout {
+            color:#c23f71;
+        }
+
         #main-content {
             flex: 1;
             display: flex;
@@ -191,7 +209,7 @@
             align-items: flex-start;
             justify-content: flex-start;
             background-color: #585858;
-            /* overflow: scroll; */
+             overflow-y: scroll; 
             box-sizing: border-box;
             padding: 20px;
             gap: 20px;
@@ -310,6 +328,34 @@
             margin-left: 5px;
             flex: 1;
             min-width: 100px;
+        }
+
+        #wallclock-set-status {
+            margin-right: 0;
+            width: 100%;
+        }
+
+        #wallclock-status span {
+            margin-right: 0;
+        }
+        #wallclock-status {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+
+
+        #wallclock-status-value.on {
+            color: #218336;
+            font-weight: bold;
+        }
+
+        #wallclock-status-value.off {
+            color: #831b43;
+            font-weight: bold;
         }
 
         .control-mode-option {

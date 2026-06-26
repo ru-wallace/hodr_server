@@ -1,0 +1,119 @@
+doctype html
+html(lang="en")
+    head
+        meta(charset="UTF-8")
+        meta(name="viewport" content="width=device-width, initial-scale=1.0")
+        title Dashboard
+        style 
+            include power.css
+
+    body 
+        #container
+            button#status-button Get Status 
+            each i in [1, 2, 3, 4]
+                .output(id=`p${i}`)
+                    .number #{i}
+                    .status 
+                        span Fetching...
+                    button.toggle Toggle
+                    .cycle
+                        button Cycle
+                        input(type="number" min="1" max="1000" value="5" name="cycleTime")
+                        label(for="cycleTime") secs
+            #footer 
+                a(href="logout") Logout
+
+        script.
+
+            function setStatus(id, status) {
+                if (status == null) {
+                    return;
+                }
+                const string = status ? "on" : "off";
+                const oppositeString = status ? "off" : "on";
+                const outlet = document.getElementById(`p${id}`);
+                outlet.classList.remove(oppositeString);
+                outlet.classList.add(string);
+                outlet.querySelector('.status').innerText = status ? "On" : "Off";
+            }
+            function getStatus() {
+                console.log("Getting Status");
+                fetch('/power_status').then((response)=> {
+                    if (response.ok) {
+                        response.json().then((result)=>{
+
+                            console.log(result);
+                            result.forEach((item, index) => {
+                                setStatus(index +1, item);
+                            });
+                        });
+
+                    } else {
+                        console.error("Error parsing response");
+                    }
+                    });
+            }
+            document.querySelector('#status-button').addEventListener('click', getStatus);
+            document.querySelectorAll('.toggle').forEach(button => {
+                button.addEventListener('click', function() {
+
+                    const number = this.closest('.output').querySelector('.number').textContent;
+
+                    var newValue = 0;
+                    const output = this.closest('.output');
+                    const status = output.querySelector('.status');
+                    if (status.textContent === 'On') {
+                        newValue = 0;
+                    } else if (status.textContent === 'Off') {
+                        newValue = 1;
+                    } else {
+                        console.error('Unexpected status:', status.textContent);
+                        return;
+                    }
+                    console.log(`Setting ${number} to ${newValue}`);
+                    fetch(`/set?p${number}=${newValue}`).then((response) => {
+                        if (response.ok) {
+                            response.json().then((result)=>{
+
+                                console.log(result);
+                                result.forEach((item, index) => {
+                                    setStatus(index +1, item);
+                                });
+                            });
+                        }
+
+                    }).catch(error => {
+                        console.error('Error toggling:', error);
+                    });
+                });
+            });
+
+            document.querySelectorAll('.cycle button').forEach(button => {
+                button.addEventListener('click', function() {
+
+                    const number = this.closest('.output').querySelector('.number').textContent;
+
+                    const cycleLength = parseInt(this.closest('.output').querySelector('.cycle input').value);
+
+                    console.log(`Setting ${number} to cycle with length ${cycleLength}`);
+                    fetch(`/cycle?p${number}=${cycleLength}`).then((response) => {
+                        if (response.ok) {
+                            response.json().then((result)=>{
+
+                                console.log(result);
+                                getStatus();
+                                setTimeout(getStatus, cycleLength*1000+1000);
+                            });
+                        }
+
+                    }).catch(error => {
+                        console.error('Error toggling:', error);
+                    });
+                });
+            });
+
+
+
+            getStatus();
+
+            setInterval( getStatus, 10000);

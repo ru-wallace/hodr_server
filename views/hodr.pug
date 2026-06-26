@@ -1,0 +1,149 @@
+doctype html
+html(lang="en")
+    head
+        meta(charset="UTF-8")
+        meta(name="viewport", content="width=device-width, initial-scale=1.0")
+        title HODR
+        style 
+            include hodr.css
+    body 
+        #top-bar
+            #logo-container 
+                #logo-graphics 
+                    #logo-colours 
+                        each n in [1, 2, 3, 4, 5]
+                            div.logo-vert(id=`l${n}`)
+                    #boat
+                        svg(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="40" height="40")
+                            path(d="M50 20 C 52 65, 60 80, 70 90 C 60 100, 40 100, 30 90 C 40 80, 48 65, 50 20 Z" fill="#ffffff")
+                span#logo-text HODR
+            #power-button-container 
+                button#power-button.unknown &#x23FB;
+                span#power-button-text POWER
+            #connection-status-container 
+                span#connection-status-icon.unknown &#x1BE4;
+                span#connection-status-text CONNECTION 
+            #links-container
+                a(href="/download") Download
+                a(href="/power") Power Switch
+                a(href="/logout").logout Logout
+
+        #main-content
+            #temp-area 
+                #temp-bar 
+                    span#temp-status 
+                        span#current-temp-status -
+                    span#temp-live 
+                        span#current-temp -
+                        span.temp-unit °C
+                    span#target-temp 
+                        span#current-target-temp -
+                        span.temp-unit °C
+                    span#temp-time Last Updated: 
+                        span#temp-last-updated -
+                    div#set-temp-container
+                        span Set Target Temperature:
+                        input#set-temp-input(type="number", placeholder="", max="20", min="-120")
+                        span.temp-unit °C
+                        button#set-temp-button Set
+                #chart-container
+                    canvas#temp-chart.chart
+            #spectrum-area
+                #spectrum-bar
+                    #acquisition-options-container
+                        #acquisition-mode-container.acq-option(data-tip="Select the acquisition mode")
+                            span Acquisition Mode:
+                            select#acquisition-mode-select
+                                option(value="single") Single Capture
+                                option(value="series") Series
+                                option(value="continuous") Continuous
+                        .acq-option#series-length-container(data-tip="Number of images to capture in a series")
+                            span Series Length:
+                            input#series-length-input(type="number", min="1", max="1000", value="10")
+                        .acq-option#series-interval-container(data-tip="Interval between image captures in seconds")
+                            span Series Interval (s):
+                            input#series-interval-input(type="number", min="0", max="60", value="1.0")
+
+                        .acq-option#wallclock-interval-container(data-tip="Wallclock acquisition interval in seconds")
+                            span Wallclock Interval:
+                            select#wallclock-interval-select
+                                option(value="1") 1 minute
+                                option(value="2") 2 minutes
+                                option(value="5") 5 minutes
+                                option(value="10") 10 minutes
+                                option(value="15") 15 minutes
+                                option(value="30") 30 minutes
+                                option(value="60") 1 hour
+                            button#set-wallclock-interval-button Set
+                        .acq-option#wallclock-set-status(data-tip="Status of the wallclock acquisition")
+                            span#wallclock-status
+                                 span Wallclock:
+                                 span#wallclock-status-value -&nbsp;
+                                 button#toggle-wallclock-button Toggle
+                                 span#next-acquisition &nbsp;Next Acquisition:&nbsp;
+                                    span#next-acquisition-time.hidden
+                        .acq-option#preamp-gain-container(data-tip="Pre-amplifier gain setting")
+                            span Pre-Amp Gain:
+                            select#preamp-gain-select
+                                option(value="0") 1x
+                                option(value="1" selected="selected") 1.7x
+                        .acq-option
+                            span#control-mode-label Exposure Mode:
+                            span.control-mode-option.active#int-time-mode Integration Time
+                            span.control-mode-option#target-intensity-mode Target Intensity
+                        .acq-option#integration-time-container(data-tip="Integration time in seconds")
+                            span Integration Time (s):
+                            input#int-time-input(type="number", min="0", max="10")
+                            button#set-int-time-button Set
+                        .acq-option#target-intensity-container(data-tip="Target intensity for automatic acquisition")
+                            span Target Intensity:
+                            input#target-intensity-input(type="number", min="0", max="65534", value="60000")
+                            button#set-target-intensity-button Set
+                    span#spectrum-status HODR Status: 
+                        span#current-spectrum-status -
+                    #spectrum-info
+                        .spectrum-info-item
+                            span#spectrum-time Timestamp: 
+                            .info-value
+                                span#last-spectrum-updated -
+                        .spectrum-info-item
+                            span#int-time Integration Time:
+                            .info-value
+                                span#integration-time -
+                                span s
+                        .spectrum-info-item
+                            span#pre-amp-gain Pre-Amp Gain:
+                            .info-value
+                                span#pre-amp-gain-value -
+                        .spectrum-info-item 
+                            span#max-intensity Maximum Intensity:
+                            .info-value
+                                span#max-intensity-value -
+                        .spectrum-info-item
+                            span#spectrum-temp Temperature:
+                            .info-value
+                                span#spectrum-temperature -
+                                span °C
+                        .spectrum-info-item
+                            span#n-spectra Number of Spectra: 
+                            .info-value
+                                span#n-spectra-count -
+                        .spectrum-info-item
+                            span#wallclock-interval Wallclock Interval:
+                            .info-value
+                                span#wallclock-interval-value -
+                                span &nbsp;mins
+
+                    #buttons
+                        a#spectrum-capture-button Capture
+                        a#download-button(href="/download/last/hodr/1") &#128427;
+                #spectrum-chart-container
+                    canvas#spectrum-chart.chart
+
+            script(src="chart.js")
+            script(src="chartjs-adapter-date-fns.js")
+            script 
+                include hodr_elements.js
+            script 
+                include hodr.js
+        

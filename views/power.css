@@ -1,0 +1,64 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+div {
+    box-sizing: border-box;
+}
+
+#container {
+    width: 100%;
+    max-width: 600px;
+    display: flex;
+    flex-direction: column;
+    margin: 0 auto;
+    background-color: bisque;
+
+}
+
+
+
+.output {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px;
+}
+
+.output.on {
+    background-color: #7de67d;
+}
+
+.output.off {
+    background-color: #ff7d7d;
+}
+
+button {
+    padding: 10px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.cycle {
+    margin-left: auto;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+}
+
+#footer {
+    text-align: center;
+    padding: 10px;
+    background-color: #f0f0f0;
+    font-size: 14px;
+}
+
+#footer a {
+    color: #007bff;
+    text-decoration: none;
+}

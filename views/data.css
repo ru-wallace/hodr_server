@@ -1,0 +1,26 @@
+body {
+    overflow-x: auto; /* Enable horizontal scrolling if content overflows */
+}
+#data {
+    white-space: nowrap;
+    font-family: monospace;
+}
+
+span {
+    display: inline-block;
+    width: 45px
+
+}
+span:nth-child(1) {
+    width: 160px; /* Set a fixed width for the first span */
+}
+span:nth-child(2) {
+    width: 125px; /* Set a fixed width for the second span */
+}
+span:nth-child(3) {
+    width: 150px; /* Set a fixed width for the third span */
+}
+
+span:nth-child(odd) {
+    color: #0000FF; /* Blue for odd spans */
+}

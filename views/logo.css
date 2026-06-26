@@ -1,0 +1,96 @@
+@import url('https://fonts.googleapis.com/css2?family=Skranji:wght@400;700&display=swap');
+
+#top-bar {
+    background-color: #333;
+    color: white;
+    text-align: center;
+    padding: 10px 20px;
+    display: flex ;
+    flex-direction: column;
+    align-items: center;
+}
+
+#logo-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    height: 75px;
+}
+
+#logo-graphics {
+    height: 100%;
+    flex: 1 0.75;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+#logo-colours {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    height: 100%;
+    
+    
+}
+
+.logo-vert {
+    width: 7.5px;
+    height: 80%;
+    background-color: #007bff;
+    margin: 0 1px;
+    border-radius: 5px;
+}
+
+#l1 {
+    background-color: #9817b8;
+    box-shadow: 0 0 10px #9817b8;
+}
+
+#l2 {
+    background-color: #007bff;
+    box-shadow: 0 0 10px #007bff;
+}
+
+#l3 {
+    background-color: #28a745;
+    box-shadow: 0 0 10px #28a745;
+}
+
+#l4 {
+    background-color: #ffc107;
+    box-shadow: 0 0 10px #ffc107;
+}
+
+#l5 {
+    background-color: #dc3545;
+    box-shadow: 0 0 10px #dc3545;
+}
+
+#boat {
+    position: absolute;
+    bottom: 0px;
+
+    margin: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+
+#logo-text {
+    font-size: 24px;
+    font-weight: bold;
+    color: #ffffff;
+    font-family: 'Skranji', cursive;
+    user-select: none;
+    margin-top: auto;
+
+}

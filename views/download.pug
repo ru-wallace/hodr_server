@@ -1,0 +1,77 @@
+doctype html
+html(lang="en")
+    head
+        meta(charset="UTF-8")
+        meta(name="viewport", content="width=device-width, initial-scale=1.0")
+        title HODR Download 
+        style 
+            include logo.css
+            include download.css
+
+
+    body 
+        #content
+            #top-bar 
+                #logo-container 
+                    #logo-graphics 
+                        #logo-colours 
+                            each n in [1, 2, 3, 4, 5]
+                                div.logo-vert(id=`l${n}`)
+                        #boat
+                            svg(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="40" height="40")
+                                path(d="M50 20 C 52 65, 60 80, 70 90 C 60 100, 40 100, 30 90 C 40 80, 48 65, 50 20 Z" fill="#ffffff")
+                    span#logo-text HODR
+                
+            #container 
+                #download-options
+                    h1 Download Options
+                .download-option
+                    span Download today's data:
+                    .download-buttons
+                        button#download-today-hodr HODR 
+                        button#download-today-TriOS TriOS
+                .download-option 
+                    span 
+                        span Download data from last 
+                        input#last-days-input(type="number", placeholder="Days", min="1", max="100000" value="7")
+                        span &nbsp;days&nbsp;
+                        span (includes today):
+                    .download-buttons
+                        button#download-last-days-hodr HODR
+                        button#download-last-days-TriOS TriOS
+                .download-option
+                    span Download data from a date range:
+                        br
+                        span (inclusive)
+                    .date-selector-container
+                        input#date-start-input(type="date", placeholder="Start Date")
+                        span to
+                        input#date-end-input(type="date", placeholder="End Date", value="")
+                    .download-buttons
+                        button#download-date-range-hodr HODR
+                        button#download-date-range-TriOS TriOS
+                .download-option
+                    span Download all data:
+                    .download-buttons
+                        button#download-all-hodr HODR
+                        button#download-all-TriOS TriOS
+                .download-option
+                    span Email yesterday's data:
+                    .download-buttons
+                        button#email-data Send
+                .download-option
+                    span Display data from last
+                    input#display-last-days-input(type="number", placeholder="Days", min="1", max="100000" value="1")
+                    span &nbsp;days&nbsp;
+                    span (includes today):
+                    .download-buttons
+                        button#display-last-days-hodr HODR
+                        button#display-last-days-TriOS TriOS
+            #bottom-bar
+                a(href="power") Power Dashboard
+                a(href="/") HODR Dashboard
+                a(href="logout") Logout
+
+        script 
+            include download.js
+

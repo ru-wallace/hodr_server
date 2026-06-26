@@ -3,10 +3,11 @@ Description=Hodr Server
 After=dbus.service network.target
 [Service]
 Environment=NODE_ENV=production
-WorkingDirectory=/home/ru/hodr_server
+#Environment=NODE_VERSION=24.3.0
+WorkingDirectory=%h/hodr_server
 Restart=always
 RestartSec=10
-ExecStart=/home/ru/.nvm/versions/node/v24.2.0/bin/node /home/ru/hodr_server/index.js
+ExecStart=%h/.nvm/nvm-exec npm run start
 
 [Install]
 WantedBy=default.target

@@ -1,0 +1,121 @@
+doctype html
+html(lang="en")
+    head
+        meta(charset="UTF-8")
+        meta(name="viewport" content="width=device-width, initial-scale=1.0")
+        title Login
+        style.
+
+            body {
+                margin:0;
+                padding:0;
+                font-family: Arial, sans-serif;
+            }
+
+            div {
+                box-sizing:border-box;
+            }
+
+            #container {
+                width: 100%;
+                max-width: 600px;
+                max-height:50%;
+                top:0;
+                bottom:0;
+                height:fit-content;
+                display: flex;
+                flex-direction: column;
+                align-items:right;
+                margin: auto;
+                background-color: bisque;
+                font-size: large;
+                position:absolute;
+                top:0;
+                bottom:0;
+                left:0;
+                right:0;
+            }
+
+            #container span {
+                text-align: center;
+                font-size: x-large;
+                margin: 20px;
+            }       
+
+            form {
+                width:80%;
+                align-self:center;
+                display: flex;
+                flex-direction: column;
+                gap:10px;
+                align-items:end;
+            }
+
+            .field {
+                display:flex;
+                flex-direction: row;
+                justify-content:flex-end;
+                gap: 5px;
+                width:100%;
+            }
+
+            .field input {
+                
+                width:70%;
+            }
+
+            .field label {
+                flex: 0 1 auto;
+            }
+
+            form button {
+                align-self:end;
+                
+                margin-left: auto;
+                font-size:large;
+                width:100%;
+                padding:10px;
+            }
+    
+    body
+        #container 
+
+            span HODR Login
+            form(action="/login" method="POST")
+                
+                #username-box.field
+                    label(for="username") Username:
+                    input(type="text" id="username" name="username", required)
+                #password-box.field
+                    label(for="password") Password:
+                    input(type="password" id="password" name="password", required)
+                
+                button(type="submit") Login
+
+            p.error #{error}
+            if message
+                p.message #{message}
+        script.
+            document.querySelector('form').addEventListener('submit', function(event) {
+                event.preventDefault(); // Prevent default form submission
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                const dest = new URLSearchParams(document.location.search).get("dest") || "";
+                fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password, dest })
+                }).then(response => {
+                    if (response.ok) {
+                        console.log('Login successful');
+                        window.location.href = '/' + (dest || ""); // Redirect to dashboard on success
+                    } else {
+                        console.error('Login failed');
+                    }
+                }).catch(error => {
+                    console.error('Error:', error);
+                    document.querySelector('.error').textContent = 'An error occurred. Please try again.';
+                });
+            });

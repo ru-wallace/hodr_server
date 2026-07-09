@@ -37,6 +37,27 @@ export function verifyToken(req, res, next) {
     });
 }
 
+export function verifyTokenWebsocket(req, socket, head) {
+    var cookies = new Cookies(req, socket);
+    const token = cookies.get('token');
+    if (!token) {
+        console.log('No token provided for WebSocket connection');
+        socket.destroy(); // Close the socket if no token is provided
+        return;
+    }
+
+    jwt.verify(token, config.access.secret, (err, decoded) => {
+        if (err) {
+            console.error('WebSocket token verification failed:', err);
+            socket.destroy(); // Close the socket if token verification fails
+            return;
+        }
+        req.user = decoded;
+        console.log("WebSocket token verification succeed")
+    });
+    
+}
+
 
 export function login(req, res) {
     console.log(req.body);

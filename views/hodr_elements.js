@@ -39,10 +39,14 @@ const controlModeTargetIntensity = document.getElementById('target-intensity-mod
 const integrationTimeInput = document.getElementById('int-time-input');
 const setIntegrationTimeButton = document.getElementById('set-int-time-button');
 const preampGainSelect = document.getElementById('preamp-gain-select');
+const readModeSelect = document.getElementById('read-mode-select');
 const targetIntensityContainer = document.getElementById('target-intensity-container');
 const targetIntensityInput = document.getElementById('target-intensity-input');
 const setTargetIntensityButton = document.getElementById('set-target-intensity-button');
 
+const singleTrackCentreInput = document.getElementById('single-track-centre');
+const singleTrackHeightInput = document.getElementById('single-track-height');
+const setSingleTrackButton = document.getElementById('set-single-track-button');
 
 
 const currentAcquisitionStatus = document.getElementById('current-spectrum-status');

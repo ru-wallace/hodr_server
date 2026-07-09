@@ -2,8 +2,13 @@
 import express from 'express';
 //const dbus = require('dbus-next');
 import dbus from 'dbus-next';
+
+
 //const fs = require('fs');
 import fs from 'fs';
+
+import {WebSocketServer} from 'ws';
+import { createServer } from 'http';
 
 import nodemailer from 'nodemailer';
 import schedule from 'node-schedule';
@@ -11,15 +16,38 @@ let bus = dbus.sessionBus();
 //let bus = dbus.systemBus(); // Use system bus for Hodr server
 let Variant = dbus.Variant;
 
-import { verifyToken, login, logout } from './auth.js';
+import { verifyToken, verifyTokenWebsocket, login, logout } from './auth.js';
 import {  getPower, setPower, setPowerCycle , parseStatus, parseCycleStatus} from './power.js';
 
 //const { config } = require('./config.js');
 import { config } from './config.js';
+import { time } from 'console';
+//import { send } from 'process';
 
 let serviceName = config.dbus.serviceName;
 let servicePath = config.dbus.servicePath;
 let interfaceName = config.dbus.interfaceName;
+
+
+const httpServer = createServer();
+//const wss = new WebSocketServer({ port: config.wsPort });
+const wss = new WebSocketServer({ noServer: true });
+
+httpServer.on('upgrade', (request, socket, head) => {
+    verifyTokenWebsocket(request, socket, head);
+    if (!request.user) {
+        console.log('WebSocket connection rejected due to invalid token');
+        socket.destroy();
+        return;
+    }
+    wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit('connection', ws, request);
+    });
+});
+
+httpServer.listen(config.wsPort, () => {
+    console.log(`WebSocket server is listening on port ${config.wsPort}`);
+});
 
 
 
@@ -44,6 +72,10 @@ function trySetupInterface() {
     });
 }
 trySetupInterface();
+
+
+
+
 
 
 //Nodemailer setup for sending email of results every day
@@ -306,14 +338,17 @@ app.post('/start_acquisition', verifyToken, async (req, res) => {
             return res.status(400).send('Invalid acquisition mode');
     }
 
+    const pre_amp_gain = req.body.pre_amp_gain > 0 ? true : false;
+
     console.log('Starting acquisition with parameters:', {
         integration_time: req.body.integration_time,
+        pre_amp_gain: pre_amp_gain,
         interval_time: req.body.interval_time,
         acquisition_mode: acquisitionMode,
         n_captures: req.body.n_captures
     });
 
-    var index = await iface.start_acquisition(req.body.integration_time, req.body.interval_time, acquisitionMode, req.body.n_captures);
+    var index = await iface.start_acquisition(req.body.integration_time, pre_amp_gain, req.body.interval_time, acquisitionMode, req.body.n_captures);
     console.log('Acquisition started with index:', index);
 
 
@@ -361,6 +396,7 @@ app.post('/set_integration_time', verifyToken, async (req, res) => {
 });
 
 app.post('/set_pre_amp_gain', verifyToken, async (req, res) => {
+    console.log('Setting preamp gain to:', req.body.preamp_gain);
     if (!iface) {
         res.status(500).send('Interface not set up. Please wait for the service to be ready.');
         return;
@@ -462,6 +498,56 @@ app.post('/set_target_temperature', verifyToken, async (req, res) => {
         res.status(500).send('Error setting target temperature');
     }
 });
+
+app.post('/set_read_mode', verifyToken, async (req, res) => {
+    if (!iface) {
+        res.status(500).send('Interface not set up. Please wait for the service to be ready.');
+        return;
+    }
+    try {
+        
+        let readMode = parseInt(req.body.read_mode);
+        let readModeVariant = new Variant('i', readMode);
+
+        let result = await iface.set_read_mode(readModeVariant.value);
+        console.log('Set read mode result:', result);
+        if (result) {
+            console.log('Read mode set to:', req.body.read_mode);
+            res.send(`Read mode set to ${req.body.read_mode}`);
+        } else {
+            console.error('Failed to set read mode:', result.value);
+            res.status(500).send('Failed to set read mode');
+        }
+    } catch (err) {
+        console.error('Error setting read mode:', err);
+        res.status(500).send('Error setting read mode');
+    }
+});
+
+app.post('/set_single_track', verifyToken, async (req, res) => {
+    if (!iface) {
+        res.status(500).send('Interface not set up. Please wait for the service to be ready.');
+        return;
+    }
+    try {
+
+        let centreVariant = new Variant('i', parseInt(req.body.centre));
+        let heightVariant = new Variant('i', parseInt(req.body.height));
+        let result = await iface.set_single_track(centreVariant.value, heightVariant.value);
+        console.log('Set single track result:', result);
+        if (result) {
+            console.log('Single track set to centre:', req.body.centre, 'height:', req.body.height);
+            res.send(`Single track set to centre: ${req.body.centre}, height: ${req.body.height}`);
+        } else {
+            console.error('Failed to set single track:', result.value);
+            res.status(500).send('Failed to set single track');
+        }
+    } catch (err) {
+        console.error('Error setting single track:', err);
+        res.status(500).send('Error setting single track');
+    }
+});
+
 
 app.get('/get_wallclock_interval', verifyToken, async (req, res) => {
     if (!iface) {
@@ -630,7 +716,7 @@ function concatFiles(device, files) {
             if (!headerAdded) {
                 // Add header only for the first file if device is HODR
                 if (device === 'hodr') {
-                    const header = "timestamp,integration_time,temperature,";
+                    const header = "timestamp,integration_time,pre_amp_gain,temperature,";
                     data += header;
                     const firstLine = fileData.split('\n')[0];
                     const columns = firstLine.split(',').length - 3; // -3 to exclude the first three columns
@@ -709,7 +795,7 @@ function getFilesInRange(device, startDate, endDate) {
 
 
 
-app.get('/download/last/:device/:days', verifyToken, (req, res) => {
+app.get('/download/last/:device/:days', (req, res) => { //removed verifyToken for testing
     const device = req.params.device;
     const days = req.params.days - 1; // Subtract 1 to include today in the download
     console.log(`Downloading last ${days} days of data for device: ${device}`);
@@ -740,7 +826,7 @@ app.get('/download/last/:device/:days', verifyToken, (req, res) => {
 });
 
 
-app.get('/display/last/:device/:days', verifyToken, (req, res) => {
+app.get('/display/last/:device/:days', (req, res) => {
     const device = req.params.device;
     const days = req.params.days - 1; // Subtract 1 to include today in the display
     console.log(`Displaying last ${days} days of data for device: ${device}`);
@@ -756,7 +842,7 @@ app.get('/display/last/:device/:days', verifyToken, (req, res) => {
         console.log(`Filtered files: ${filteredFiles}`);
         concatFiles(device, filteredFiles).then(data => {
             res.setHeader('Content-Type', 'text/html');
-            res.render('data', { title: 'Data Display', data: data });
+            res.render('data', { title: `${device} data`, data: data });
         }).catch(err => {
             console.error('Error concatenating files:', err);
             res.status(500).send('Error concatenating files');
@@ -826,6 +912,183 @@ app.get('/download/email', verifyToken, (req, res) => {
 	res.redirect('/download');
 });
 
+
+function sendStatusUpdate(ws) {
+    if (!iface) {
+        console.error('HODR interface not set up. Please check if the HODR service is running.');
+        ws.send('error: HODR interface not set up');
+        return;
+    }
+    Promise.all([
+        propsIface.Get(interfaceName, 'Temperature'),
+        propsIface.Get(interfaceName, 'TargetTemperature'),
+        propsIface.Get(interfaceName, 'TemperatureStatus'),
+        propsIface.Get(interfaceName, 'active'),
+        propsIface.Get(interfaceName, 'IntegrationTimeSecs'),
+        propsIface.Get(interfaceName, 'acquisitionStatus'),
+        propsIface.Get(interfaceName, 'numberSpectra'),
+        propsIface.Get(interfaceName, 'wallclockInterval'),
+        propsIface.Get(interfaceName, 'wallclockAcquisitionActive'),
+        propsIface.Get(interfaceName, 'wallclockNextCapture')
+    ]).then(([temp, targetTemp, tempStatus, power, integrationTime, acqStatus, nSpectra, wallclockInterval, wallclockAcquisitionActive, wallclockNextCapture]) => {
+        let statusData = {
+            temperature: temp.value,
+            target_temperature: targetTemp.value,
+            temperature_status: tempStatus.value,
+            power_status: power.value,
+            integration_time: integrationTime.value,
+            acquisition_status: acqStatus.value,
+            number_spectra: nSpectra.value,
+            wallclock_interval: wallclockInterval.value,
+            wallclock_acquisition_active: wallclockAcquisitionActive.value,
+            wallclock_next_capture: wallclockNextCapture.value
+        }
+
+        let message = {
+            header: "status_data",
+            payload: statusData
+        }
+        console.log('Sending status update to client.');
+        ws.send(JSON.stringify(message));
+    }).catch((err) => {
+        console.error('Error fetching status:', err);
+        ws.send('error: Error fetching status');
+    });
+}
+
+
+
+
+
+wss.on('connection', (ws, request, client) => {
+    wss.on('error', (error) => {
+        console.error('WebSocket error:', error);
+    });
+
+    
+    console.log(`WebSocket client connected from ${request.socket.remoteAddress}`);
+    console.log(`Total connected clients: ${wss.clients.size}`);
+    // wss.clients.forEach((client) => {
+    //     console.log(`Client readyState: ${client.readyState}`);
+    //     if (client.readyState == 1) {
+    //         sendStatusUpdate(client);
+    //     } else {
+    //         console.log(`Client not open, readyState: ${client.readyState}`);
+    //     }
+    // });
+
+    
+    ws.send(JSON.stringify({ header: "connection_ack", payload: "Connected to HODR WebSocket server" }));
+    sendStatusUpdate(ws);
+
+
+    ws.on('message', (message) => {
+        if (message == 'get_data') {
+            if (!iface) {
+                console.error('HODR interface not set up. Please check if the HODR service is running.');
+                ws.send('error: HODR interface not set up');
+                return;
+            }
+            console.log('Received get_data request from client');
+            iface.get_data().then((lastSpectrum) => {
+                let spectrumData = {
+                    timestamp: lastSpectrum[0],
+                    integration_time: lastSpectrum[1],
+                    pre_amp_gain: lastSpectrum[2],
+                    temperature: lastSpectrum[3],
+                    data: lastSpectrum[4],
+                }
+
+                let message = {
+                    header: "spectrum_data",
+                    payload: spectrumData
+                }
+
+                console.log('Sending last spectrum data to client');
+                ws.send(JSON.stringify(message));
+            }).catch((err) => {
+                console.error('Error fetching last spectrum:', err);
+                ws.send('error: Error fetching last spectrum');
+            });
+        } else if (message == 'get_status') {
+            console.log('Received get_status request from client');
+            sendStatusUpdate(ws);
+        }
+    });
+
+
+
+
+    ws.on('close', () => {
+        console.log('WebSocket client disconnected');
+    });
+});
+
+
+function addInterfaceListeners() {
+    if (!iface) {
+        console.error('HODR interface not set up. Please check if the HODR service is running.');
+        setTimeout(addInterfaceListeners, 100); // Retry after 100ms
+        return;
+    }
+
+    propsIface.on('PropertiesChanged', (interfaceName, changedProperties, invalidatedProperties) => {
+        console.log(`Properties changed on interface ${interfaceName}:`, changedProperties);
+        console.log(`Invalidated properties:`, invalidatedProperties);
+        wss.clients.forEach((client) => {
+            console.log(`Client readyState: ${client.readyState}`);
+            if (client.readyState == 1) {
+                let message = {
+                    header: "properties_changed",
+                    payload: {
+                        changedProperties: changedProperties,
+                        invalidatedProperties: invalidatedProperties
+                    }
+                }
+
+                client.send(JSON.stringify(message));
+
+                if (changedProperties.hasOwnProperty('active')) {
+                    if (changedProperties.active.value) {
+                        console.log('Device active, sending status update to client');
+                        sendStatusUpdate(client);
+                    }
+                }
+            } else {
+                console.log(`Client not open, readyState: ${client.readyState}`);
+            }
+        });
+    });
+
+    iface.on('acquisition_finished', (index) => {
+        console.log(`Acquisition finished with index: ${index}`);
+        console.log(`Clients connected: ${wss.clients.size}`);
+        wss.clients.forEach((client) => {
+            console.log(`Client readyState: ${client.readyState}`);
+            if (client.readyState == 1) {
+                console.log(`Sending message to client: Acquisition finished with index: ${index}`);
+
+                let message = {
+                    header: "acquisition_finished",
+                    payload: {
+                        index: index
+                    }
+                }
+                client.send(JSON.stringify(message));
+                client.send(`acquisition finished`);
+            } else {
+                console.log(`Client not open, readyState: ${client.readyState}`);
+            }
+        });
+    });
+
+    
+
+
+    console.log('Added acquisition_finished listener to HODR interface');
+}
+
+addInterfaceListeners();
 
 
 app.listen(port, () => {

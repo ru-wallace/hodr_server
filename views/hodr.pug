@@ -34,9 +34,11 @@ html(lang="en")
                     span#temp-status 
                         span#current-temp-status -
                     span#temp-live 
+                        span Temperature: 
                         span#current-temp -
                         span.temp-unit °C
                     span#target-temp 
+                        span Target: 
                         span#current-target-temp -
                         span.temp-unit °C
                     span#temp-time Last Updated: 
@@ -87,6 +89,17 @@ html(lang="en")
                             select#preamp-gain-select
                                 option(value="0") 1x
                                 option(value="1" selected="selected") 1.7x
+                        .acq-option#read-mode-container(data-tip="Select the read mode for the acquisition")
+                            span Read Mode:
+                            select#read-mode-select
+                                option(value="3") Single Track
+                                option(value="0") Full Vertical Binning
+                        .acq-option#single-track-container(data-tip="Single Track parameters")
+                            span Single Track - Centre:
+                            input#single-track-centre(type="number", min="0", max="128", value="10")
+                            span Height:
+                            input#single-track-height(type="number", min="0", max="128", value="20")
+                            button#set-single-track-button Set
                         .acq-option
                             span#control-mode-label Exposure Mode:
                             span.control-mode-option.active#int-time-mode Integration Time

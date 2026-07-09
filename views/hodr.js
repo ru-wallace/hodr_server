@@ -1,3 +1,11 @@
+
+var currentTemperatureValue = null;
+var currentTargetTemperatureValue = null;
+var currentConnectionStatus = false;
+
+var wallclockNextCapture = null;
+
+
 const temperatureData = [];
 const targetTemps = [];
 const timestamps = [];
@@ -9,7 +17,7 @@ Chart.defaults.color = '#ffffff';
 var spectrumReference;
 
 
-const wl_calibration_coefficients = [-2.71441094e-05,  5.31251935e-01,  3.39244276e+02]
+const wl_calibration_coefficients = [-2.71441094e-05, 5.31251935e-01, 3.39244276e+02]
 
 var getTempInterval;
 
@@ -56,7 +64,7 @@ const tempChart = new Chart(temperatureCanvas, {
                 title: {
                     display: true,
                     text: 'Temperature (°C)'
-                },               
+                },
 
             },
             x: {
@@ -172,6 +180,102 @@ function applyWavelengthCalibration(indices, sigFig = 2) {
     });
 }
 
+function updateTemperatureChart() {
+
+    setTimeout(updateTemperatureChart, 1000); // Retry after 1 second
+    if (tempChart === undefined || tempChart === null || !powerON || !currentConnectionStatus) {
+        return;
+    }
+
+
+    const time = new Date();
+    //console.log('Updating temperature chart at:', time.toLocaleTimeString());
+
+    if (currentTemperatureValue !== null) {
+        temperatureData.push({
+            x: time,
+            y: currentTemperatureValue
+        });
+    }
+
+    if (currentTargetTemperatureValue !== null) {
+        targetTemps.push({
+            x: time,
+            y: currentTargetTemperatureValue
+        });
+
+        if (temperatureData.length > 50) {
+            temperatureData.shift();
+            targetTemps.shift();
+        }
+
+        //tempChart.data.labels = timestamps.map(t => t.toLocaleTimeString());
+        tempChart.data.datasets[0].data = temperatureData;
+        tempChart.data.datasets[1].data = targetTemps;
+        tempChart.update();
+    }
+}
+
+function handleNewTemperature(newTemperature) {
+    console.log('New temperature received:', newTemperature);
+    const time = new Date();
+    // const time_unix = time.getTime();
+    // // timestamps.push(time);
+
+    // temperatureData.push({
+    //     x: time,
+    //     y: newTemperature
+    // });
+
+    // if (temperatureData.length > 50) {
+    //     temperatureData.shift();
+    //     // timestamps.shift();
+    // }
+
+    currentTemperatureValue = newTemperature;
+
+    currentTemperature.textContent = newTemperature.toFixed(2);
+    tempLastUpdated.textContent = time.toLocaleTimeString();
+}
+
+function handleNewTargetTemperature(newTargetTemperature) {
+    console.log('New target temperature received:', newTargetTemperature);
+    // const time = new Date();
+    // targetTemps.push({
+    //     x: time,
+    //     y: newTargetTemperature
+    // });
+
+
+    // if (targetTemps.length > 50) {
+    //     targetTemps.shift();
+    // }
+    currentTargetTemperatureValue = newTargetTemperature;
+    currentTargetTemperature.textContent = newTargetTemperature.toFixed(2);
+}
+
+function handleNewTemperatureStatus(newTemperatureStatus) {
+    console.log('New temperature status received:', newTemperatureStatus);
+    const status = newTemperatureStatus.trim().replace(/['"]+/g, '');
+    if (status === 'Temperature not reached') {
+        currentTemperatureStatus.className = 'not-reached';
+        currentTemperatureStatus.innerHTML = 'Not Reached Target';
+    } else if (status === 'Temperature not stabilized') {
+        currentTemperatureStatus.className = 'not-stabilized';
+        currentTemperatureStatus.innerHTML = 'Stabilizing';
+    } else if (status === 'Temperature stabilized') {
+
+        currentTemperatureStatus.className = 'stabilized';
+        currentTemperatureStatus.innerHTML = 'Stabilized';
+    } else if (status === 'Acquiring Data') {
+        currentTemperatureStatus.className = 'not-stabilized';
+        currentTemperatureStatus.innerHTML = 'Acquiring Data';
+    } else {
+        currentTemperatureStatus.className = '';
+        currentTemperatureStatus.innerHTML = status;
+    }
+}
+
 
 function handleNewTemperatureData(newTemperature, newTargetTemperature, newTemperatureStatus) {
     console.log('New temperature data received:', newTemperature, newTargetTemperature, newTemperatureStatus);
@@ -179,10 +283,10 @@ function handleNewTemperatureData(newTemperature, newTargetTemperature, newTempe
     const time_unix = time.getTime();
     timestamps.push(time);
 
-    temperatureData.push({
-        x: time,
-        y: newTemperature
-    });
+    // temperatureData.push({
+    //     x: time,
+    //     y: newTemperature
+    // });
 
     targetTemps.push({
         x: time,
@@ -246,12 +350,12 @@ function handleNewPowerStatus(newPowerStatus, unknown = false) {
         return;
     }
 
+    powerON = newPowerStatus;
+
     if (newPowerStatus) {
-        powerON = true;
         powerButton.classList.remove('off');
         powerButton.classList.add('on');
     } else {
-        powerON = false;
         powerButton.classList.remove('on');
         powerButton.classList.add('off');
 
@@ -267,6 +371,7 @@ function handleNewPowerStatus(newPowerStatus, unknown = false) {
 }
 
 function handleNewAcquisitionStatus(newAcquisitionStatus) {
+
 
 
     if (!powerON) {
@@ -331,6 +436,149 @@ function calculateNextAcquisitionTime(interval) {
 
 }
 
+function handleWallclockStatusUpdate(active) {
+    console.log('Wallclock acquisition status updated:', active);
+    if (wallclockAcquisitionActive) {
+
+        wallclockStatusValue.textContent = 'On';
+        wallclockStatusValue.classList.remove('off');
+        wallclockStatusValue.classList.add('on');
+        toggleWallclockButton.textContent = 'Stop';
+        nextAcquisitionTime.classList.remove('hidden');
+    } else {
+        nextAcquisitionTime.classList.add('hidden');
+        wallclockStatusValue.textContent = 'Off';
+        wallclockStatusValue.classList.remove('on');
+        wallclockStatusValue.classList.add('off');
+        toggleWallclockButton.textContent = 'Start';
+    }
+}
+
+function handleWallclockNextAcquisitionTime(nextCapture) {
+    if (!nextCapture || nextCapture === null) {
+        console.log('Wallclock next capture is null, skipping update.');
+        nextAcquisitionTime.textContent = 'N/A';
+        return;
+    }
+    console.log('Wallclock next capture updated:', nextCapture);
+    wallclockNextCapture = nextCapture;
+    
+    const nextCaptureDate = new Date(wallclockNextCapture * 1000); // Convert seconds to milliseconds
+    console.log('Wallclock next capture:', nextCaptureDate);
+    nextAcquisitionTime.textContent = nextCaptureDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function handleWallclockIntervalUpdate(interval) {
+    console.log('Wallclock acquisition interval updated:', interval);
+    wallclockAcquisitionInterval = interval;
+    wallclockAcquisitionIntervalInput.value = wallclockAcquisitionInterval;
+}
+
+
+function handleConnectionChange(connectionStatus) {
+
+    currentConnectionStatus = connectionStatus;
+    console.log('Connection status changed:', connectionStatus);
+    
+
+    if (connectionStatus) {
+        connectionStatusIcon.classList.remove('disconnected', 'unknown');
+        connectionStatusIcon.classList.add('connected');
+
+        wallclockStatusValue.classList.remove('unknown');
+        currentAcquisitionStatus.textContent = '-';
+
+    } else {
+        wallclockStatusValue.classList.remove('on', 'off');
+        connectionStatusIcon.classList.remove('connected', 'unknown');
+        currentAcquisitionStatus.textContent = 'Disconnected';
+        currentTemperatureStatus.classList.remove('stabilized', 'not-reached', 'not-stabilized');
+        currentTemperatureStatus.textContent = 'Disconnected';
+        currentTemperature.textContent = '-';
+        currentTargetTemperature.textContent = '-';
+    }
+
+    
+
+
+    tempSetButton.disabled = !connectionStatus;
+    acquisitionModeSelect.disabled = !connectionStatus;
+    seriesLengthInput.disabled = !connectionStatus;
+    seriesIntervalInput.disabled = !connectionStatus;
+    wallclockAcquisitionIntervalInput.disabled = !connectionStatus;
+    wallclockAcquisitionIntervalButton.disabled = !connectionStatus;
+    wallclockStatusValue.textContent = '-';
+    
+    
+    toggleWallclockButton.disabled = !connectionStatus;
+    preampGainSelect.disabled = !connectionStatus;
+    readModeSelect.disabled = !connectionStatus;
+    singleTrackCentreInput.disabled = !connectionStatus;
+    singleTrackHeightInput.disabled = !connectionStatus;
+    setSingleTrackButton.disabled = !connectionStatus;
+    integrationTimeInput.disabled = !connectionStatus;
+    targetIntensityInput.disabled = !connectionStatus;
+    captureButton.disabled = !connectionStatus;
+    downloadButton.disabled = !connectionStatus;
+}
+
+
+
+function handleStatusUpdate(status) {
+    downloadButton.classList.remove('disabled');
+
+
+    newPowerStatus = status.power_status;
+    newTemperature = status.temperature;
+    currentTemperatureValue = newTemperature;
+
+    newTargetTemperature = status.target_temperature;
+    currentTargetTemperatureValue = newTargetTemperature;
+    newAcquisitionStatus = status.acquisition_status;
+    newNumberSpectra = status.number_spectra;
+    newIntegrationTime = status.integration_time;
+
+    var wallclockNextCapture = status.wallclock_next_capture;
+
+    wallclockAcquisitionInterval = status.wallclock_interval;
+    wallclockAcquisitionActive = status.wallclock_acquisition_active;
+    
+    console.log('New status data:', {
+
+        newPowerStatus,
+        newTemperature,
+        newTargetTemperature,
+        newAcquisitionStatus,
+        newIntegrationTime,
+        newNumberSpectra,
+        wallclockNextCapture,
+        wallclockAcquisitionInterval,
+        wallclockAcquisitionActive
+    })
+    
+    handleWallclockStatusUpdate(wallclockAcquisitionActive);
+    handleWallclockNextAcquisitionTime(wallclockNextCapture);
+    handleWallclockIntervalUpdate(wallclockAcquisitionInterval);
+
+    connectionStatusIcon.classList.remove('disconnected', 'unknown');
+    connectionStatusIcon.classList.add('connected');
+
+    handleNewPowerStatus(newPowerStatus);
+    if (powerON) {
+        tempSetButton.disabled = false;
+        handleNewTemperature(newTemperature);
+        handleNewTargetTemperature(newTargetTemperature);
+        handleNewTemperatureStatus(status.temperature_status);
+    }
+    handleNewAcquisitionStatus(newAcquisitionStatus);
+
+    nSpectraCount.textContent = newNumberSpectra;
+    if (newNumberSpectra > nSpectra) {
+        nSpectra = newNumberSpectra;
+        //getData();
+    }
+}
+
 
 async function getStatus() {
     console.log('Fetching status...');
@@ -375,7 +623,7 @@ async function getStatus() {
                 wallclockStatusValue.classList.remove('off');
                 wallclockStatusValue.classList.add('on');
                 toggleWallclockButton.textContent = 'Stop';
-                
+
                 nextAcquisitionTime.classList.remove('hidden');
 
                 //conver wallclockNextCapture to a Date object
@@ -403,7 +651,7 @@ async function getStatus() {
             nSpectraCount.textContent = newNumberSpectra;
             if (newNumberSpectra > nSpectra) {
                 nSpectra = newNumberSpectra;
-                getData();
+                //getData();
             }
         })
         .catch(error => {
@@ -538,7 +786,7 @@ function getDataIfNew() {
             if (numberSpectra > nSpectra) {
                 nSpectra = numberSpectra;
 
-                getData();
+                //getData();
             } else {
                 console.warn('No new spectrum data available.');
             }
@@ -588,6 +836,37 @@ function getDataIfNew() {
 }
 
 
+
+function handleNewSpectrumData(spectrumData) {
+    console.log('Handling new spectrum data:', spectrumData);
+
+    if (!Array.isArray(spectrumData.data) || spectrumData.data.length === 0) {
+        console.error('Invalid spectrum data:', spectrumData);
+        return;
+    }
+
+    const wavelengths = applyWavelengthCalibration(spectrumData.data.map((_, index) => index + 1));
+    const intensities = spectrumData.data;
+
+    // turn data into an array of objects with x and y properties for Chart.js
+    const spectrumPoints = wavelengths.map((wavelength, index) => {
+        return { x: wavelength, y: intensities[index] };
+    });
+
+    if (spectrumReference !== null) {
+        //spectrumChart.data.labels = wavelengths;
+        spectrumChart.data.datasets[0].data = spectrumPoints;
+        spectrumChart.update();
+
+        spectrumLastUpdated.textContent = spectrumData.timestamp;
+        spectrumIntegrationTime.textContent = `${spectrumData.integration_time.toFixed(5)}`;
+        spectrumPreAmpGain.textContent = `${spectrumData.pre_amp_gain.toFixed(1)}`;
+        spectrumMaxIntensity.textContent = `${Math.max(...intensities)}`;
+        spectrumTemperature.textContent = `${spectrumData.temperature.toFixed(2)}`;
+    } else {
+        console.error('No valid spectrum reference found.');
+    }
+}
 
 function getData() {
 
@@ -661,6 +940,7 @@ function startAcquisition() {
     var integrationTime = parseFloat(integrationTimeInput.value);
     var seriesLength = parseInt(seriesLengthInput.value);
     var seriesInterval = parseFloat(seriesIntervalInput.value);
+    var preAmpGain = parseInt(preampGainSelect.value);
     var mode = acquisitionModeSelect.value;
     console.log('Integration time:', integrationTime);
     if (isNaN(integrationTime) || integrationTime <= 0) {
@@ -673,6 +953,7 @@ function startAcquisition() {
         },
         body: JSON.stringify({
             "integration_time": integrationTime,
+            "pre_amp_gain": preAmpGain,
             "interval_time": seriesInterval,
             "acquisition_mode": mode,
             "n_captures": seriesLength
@@ -701,14 +982,14 @@ function startAcquisition() {
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Document loaded, initializing HODR interface...');
-    getTemp(); // Initial fetch
-    getStatus().then(() => {
-        wallclockAcquisitionIntervalInput.value = wallclockAcquisitionInterval;
-        console.log('Wallclock acquisition active:', wallclockAcquisitionActive);
-    });
-    refreshInterval = setInterval(() => {
-        getStatus();
-    }, 1000);
+    //getTemp(); // Initial fetch
+    // getStatus().then(() => {
+    //     wallclockAcquisitionIntervalInput.value = wallclockAcquisitionInterval;
+    //     console.log('Wallclock acquisition active:', wallclockAcquisitionActive);
+    // });
+    // refreshInterval = setInterval(() => {
+    //     getStatus();
+    // }, 1000);
 
 
     powerButton.addEventListener('click', () => {
@@ -747,7 +1028,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    getData(); // Initial data fetch
+    //getData(); // Initial data fetch
 });
 
 function setTemp() {
@@ -774,7 +1055,7 @@ function setTemp() {
         .then(responseText => {
             console.log('Set target temperature response:', responseText);
             tempSetInput.value = ''; // Clear input field
-            getTemp(); // Refresh data
+            //getTemp(); // Refresh data
         })
         .catch(error => console.error('Error setting target temperature:', error));
 }
@@ -943,7 +1224,7 @@ function setTargetIntensity() {
         .then(responseText => {
             console.log('Set target intensity response:', responseText);
 
-            getData(); // Refresh data
+            //getData(); // Refresh data
         })
         .catch(error => console.error('Error setting target intensity:', error));
 }
@@ -1030,6 +1311,155 @@ toggleWallclockButton.addEventListener('click', () => {
         .catch(error => console.error('Error changing wallclock acquisition status:', error));
 });
 
+readModeSelect.addEventListener('change', () => {
+    const selectedMode = readModeSelect.value;
+    console.log('Changing read mode to:', selectedMode);
+    fetch('set_read_mode', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ read_mode: selectedMode })
+    })
+        .then(response => response.text())
+        .then(responseText => {
+            console.log('Set read mode response:', responseText);
+            //getData(); // Refresh data
+        })
+        .catch(error => console.error('Error setting read mode:', error));
+});
+
+setSingleTrackButton.addEventListener('click', () => {
+    console.log('Setting single track mode...');
+
+    let centre = parseInt(singleTrackCentreInput.value);
+    let height = parseInt(singleTrackHeightInput.value);
+    fetch('set_single_track', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ centre: centre, height: height })
+    })
+        .then(response => response.text())
+        .then(responseText => {
+            console.log('Set single track mode response:', responseText);
+            //getData(); // Refresh data
+        })
+        .catch(error => console.error('Error setting single track mode:', error));
+});
+
+
+
+function handlePropertiesChangedNotification(message) {
+    //console.log('Received property changed notification via WebSocket:', message);
+    if (message.payload && message.payload.changedProperties) {
+        const changedProperties = message.payload.changedProperties;
+        Object.keys(changedProperties).forEach(property => {
+            console.log(`Property changed: ${property} = ${changedProperties[property].value}`);
+            switch (property) {
+                case 'power_status':
+                    handleNewPowerStatus(changedProperties[property].value);
+                    break;
+                case 'Temperature':
+                    handleNewTemperature(changedProperties[property].value);
+                    break;
+                case 'TargetTemperature':
+                    handleNewTargetTemperature(changedProperties[property].value);
+                    break;
+                case 'TemperatureStatus':
+                    handleNewTemperatureStatus(changedProperties[property].value);
+                    break;
+                case 'active':
+                    powerON = changedProperties[property].value;
+                    handleNewPowerStatus(powerON);
+                    break;
+                case 'acquisitionStatus':
+                    handleNewAcquisitionStatus(changedProperties[property].value);
+                    break;
+                case 'wallclockAcquisitionActive':
+                    wallclockAcquisitionActive = changedProperties[property].value;
+                    handleWallclockStatusUpdate(wallclockAcquisitionActive);
+                    break;
+                case 'wallclockNextCapture':
+                    handleWallclockNextAcquisitionTime(changedProperties[property].value);
+                    break;
+                case 'wallclockInterval':
+                    wallclockAcquisitionInterval = changedProperties[property].value;
+                    handleWallclockIntervalUpdate(wallclockAcquisitionInterval);
+                    break;
+                default:
+                    console.log(`No handler for property: ${property}`);
+            }
+        });
+    }
+}
+
+
+
+
+function connectWebSocket() {
+    const socket = new WebSocket("ws://" + window.location.host + "/ws");
+
+
+    socket.addEventListener('open', () => {
+        console.log('WebSocket connection established.');
+
+        //socket.send("get_status");
+
+        socket.send("get_data");
+        handleConnectionChange(true); // Update connection status to connected
+
+
+    });
+
+
+
+    socket.addEventListener('message', (event) => {
+        const message = JSON.parse(event.data);
+        if (message.header && message.header === 'acquisition_finished') {
+            socket.send('get_data');
+        } else if (message.header && message.header === 'spectrum_data') {
+            console.log('Received spectrum data via WebSocket:', message);
+            if (message.payload) {
+                const spectrumData = message.payload;
+                handleNewSpectrumData(spectrumData);
+            }
+        } else if (message.header && message.header === 'properties_changed') {
+            //console.log('Received property changed notification via WebSocket:', message);
+            handlePropertiesChangedNotification(message);
+
+        } else if (message.header && message.header === 'status_data') {
+            console.log('Received status data via WebSocket:', message);
+            if (message.payload) {
+                const status = message.payload;
+                handleStatusUpdate(status);
+            }
+        } else {
+            console.log('Received unhandled WebSocket message:', message);
+        }
+
+
+    });
+
+    socket.addEventListener('close', () => {
+        console.log('WebSocket connection closed.');
+        handleConnectionChange(false); // Update connection status to disconnected
+        setTimeout(connectWebSocket, 1000); // Attempt to reconnect after 1 second
+    });
+
+    socket.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        socket.close();
+    };
+
+}
+
+connectWebSocket(); // Establish WebSocket connection on page load
+
+setTimeout(updateTemperatureChart, 1000); // Delay to ensure data is fetched before updating the chart
+
+
 fetch('get_wallclock_status')
     .then(response => response.json())
     .then(wallclockStatusResponse => {
@@ -1062,8 +1492,8 @@ fetch('integration_time')
     .then(response => response.json())
     .then(integrationTimeResponse => {
         console.log('Raw integration time data:', integrationTimeResponse);
-        
-        const integrationTime =integrationTimeResponse.integration_time;
+
+        const integrationTime = integrationTimeResponse.integration_time;
         console.log('Parsed integration time:', integrationTime);
         if (isNaN(integrationTime) || integrationTime <= 0) {
             console.error('Invalid integration time data:', integrationTimeResponse);
@@ -1075,7 +1505,7 @@ fetch('integration_time')
         } else {
             integrationTimeInput.value = integrationTime.toFixed(2);
         }
-        
+
     })
     .catch(error => console.error('Error fetching integration time data:', error));
 

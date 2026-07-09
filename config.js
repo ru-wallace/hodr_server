@@ -5,6 +5,7 @@ dotenv.config();
 
 export const config = {
     port: process.env.PORT || 3000,
+    wsPort: process.env.WEBSOCKET_PORT || 3003,
     staticDir: process.env.STATIC_DIR || 'www',
     device: process.env.DEVICE_NAME,
     dbus: {

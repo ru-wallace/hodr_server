@@ -55,6 +55,9 @@ const spectrumIntegrationTime = document.getElementById('integration-time');
 const spectrumPreAmpGain = document.getElementById('pre-amp-gain-value');
 const spectrumMaxIntensity = document.getElementById('max-intensity-value');
 const spectrumTemperature = document.getElementById('spectrum-temperature');
+const spectrumReadMode = document.getElementById('spectrum-read-mode');
+const spectrumSingleTrackCentre = document.getElementById('spectrum-single-track-centre');
+const spectrumSingleTrackHeight = document.getElementById('spectrum-single-track-height');
 const nSpectraCount = document.getElementById('n-spectra-count');
 
 const wallclockInterval = document.getElementById('wallclock-interval-value');

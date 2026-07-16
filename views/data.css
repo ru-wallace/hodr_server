@@ -1,29 +1,36 @@
 body {
     overflow-x: auto; /* Enable horizontal scrolling if content overflows */
+    padding: 0;
+    
 }
 #data {
     white-space: nowrap;
     font-family: monospace;
 }
 
-span {
-    display: inline-block;
-    width: 45px
-
-}
-span:nth-child(1) {
-    width: 160px; /* Set a fixed width for the first span */
-}
-span:nth-child(2) {
-    width: 125px; /* Set a fixed width for the second span */
-}
-span:nth-child(3) {
-    width: 100px; /* Set a fixed width for the third span */
-}
-span:nth-child(4) {
-    width: 100px; /* Set a fixed width for the fourth span */
+table {
+    border-collapse: collapse;
+    width: max-content; /* Adjust table width based on content */
+    table-layout: fixed;
 }
 
-span:nth-child(odd) {
-    color: #0000FF; /* Blue for odd spans */
+table tr td {
+    border: 1px solid #ccc;
+    padding: 2px 4px;
+    text-align: left;
 }
+
+th {
+    position: sticky;
+    top: 0;
+    background-color: #f2f2f2;
+    text-wrap: wrap;
+    width: min-content; /* Set a fixed width for each header cell */
+    padding: 2px 4px;
+    border: 1px solid #ccc;
+    vertical-align: bottom;
+}
+/* tr th {
+    word-wrap: break-word;
+    width: min-content;
+} */

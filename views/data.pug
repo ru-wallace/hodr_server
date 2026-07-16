@@ -7,24 +7,47 @@ html(lang="en")
         style
             include data.css
     body 
-        #data
+        table#data
         script.
             const dataContainer = document.getElementById('data');
-            //break data into lines and each line into spans by comma delimiter - alternating colours per column
+            //break data into lines and each line by comma delimiter - alternating colours per column
+            // add into table with each line as a row and each column as a cell
             var raw_data = `#{data}`;
 
             var lines = raw_data.split('\n');
-            for (var i = 0; i < lines.length; i++) {
+
+            var header = lines[0].split(',');
+            var headerRow = document.createElement('tr');
+            dataContainer.appendChild(headerRow);
+            for (var j = 0; j < header.length; j++) {
+                var cell = document.createElement('th');
+                
+                cell.innerText = header[j].trim().replace(/_/g, ' ');
+                headerRow.appendChild(cell);
+            }
+
+            for (var i = 1; i < lines.length; i++) {
                 var line = lines[i];
-                var lineDiv = document.createElement('div');
-                dataContainer.appendChild(lineDiv);
+                var row = document.createElement('tr');
+                dataContainer.appendChild(row);
                 var columns = line.split(',');
                 for (var j = 0; j < columns.length; j++) {
-                    var span = document.createElement('span');
-                    span.innerText = columns[j] + (j < columns.length - 1 ? ', ' : '');
-            
-                    lineDiv.appendChild(span);
+                    var cell = document.createElement('td');
+                    cell.innerText = columns[j];
+                    row.appendChild(cell);
                 }
-                
             }
+            //- for (var i = 0; i < lines.length; i++) {
+            //-     var line = lines[i];
+            //-     var lineDiv = document.createElement('div');
+            //-     dataContainer.appendChild(lineDiv);
+            //-     var columns = line.split(',');
+            //-     for (var j = 0; j < columns.length; j++) {
+            //-         var span = document.createElement('span');
+            //-         span.innerText = columns[j] + (j < columns.length - 1 ? ', ' : '');
+            
+            //-         lineDiv.appendChild(span);
+            //-     }
+                
+            //- }
             

@@ -24,6 +24,10 @@ body {
     align-items: center;
 }
 
+.hidden {
+    display: none !important;
+}
+
 #logo-container {
     position: relative;
     display: flex;

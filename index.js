@@ -5,7 +5,7 @@ import dbus from 'dbus-next';
 
 
 //const fs = require('fs');
-import fs from 'fs';
+import fs, { read } from 'fs';
 
 import {WebSocketServer} from 'ws';
 import { createServer } from 'http';
@@ -227,12 +227,13 @@ app.get('/status', verifyToken, (req, res) => {
     let powerPromise = propsIface.Get(interfaceName, 'active');
     let integrationTimePromise = propsIface.Get(interfaceName, 'IntegrationTimeSecs');
     let acqStatusPromise = propsIface.Get(interfaceName, 'acquisitionStatus');
+    let readModePromise = propsIface.Get(interfaceName, 'readMode');
     let nSpectraPromise = propsIface.Get(interfaceName, 'numberSpectra');
     let wallclockIntervalPromise = propsIface.Get(interfaceName, 'wallclockInterval');
     let wallclockAcquisitionActivePromise = propsIface.Get(interfaceName, 'wallclockAcquisitionActive');
     let wallclockNextCapturePromise = propsIface.Get(interfaceName, 'wallclockNextCapture');
-    Promise.all([tempPromise, targetTempPromise, tempStatusPromise, powerPromise, integrationTimePromise, acqStatusPromise, nSpectraPromise, wallclockIntervalPromise, wallclockAcquisitionActivePromise, wallclockNextCapturePromise])
-        .then(([temp, targetTemp, tempStatus, power, integrationTime, acqStatus, nSpectra, wallclockInterval, wallclockAcquisitionActive, wallclockNextCapture]) => {
+    Promise.all([tempPromise, targetTempPromise, tempStatusPromise, powerPromise, integrationTimePromise, acqStatusPromise, readModePromise, nSpectraPromise, wallclockIntervalPromise, wallclockAcquisitionActivePromise, wallclockNextCapturePromise])
+        .then(([temp, targetTemp, tempStatus, power, integrationTime, acqStatus, readMode, nSpectra, wallclockInterval, wallclockAcquisitionActive, wallclockNextCapture]) => {
             res.json({
                 temperature: temp.value,
                 target_temperature: targetTemp.value,
@@ -240,6 +241,7 @@ app.get('/status', verifyToken, (req, res) => {
                 power_status: power.value,
                 integration_time: integrationTimePromise.value,
                 acquisition_status: acqStatus.value,
+                read_mode: readMode.value,
                 number_spectra: nSpectra.value,
                 wallclock_interval: wallclockInterval.value,
                 wallclock_acquisition_active: wallclockAcquisitionActive.value,
@@ -716,15 +718,15 @@ function concatFiles(device, files) {
             if (!headerAdded) {
                 // Add header only for the first file if device is HODR
                 if (device === 'hodr') {
-                    const header = "timestamp,integration_time,pre_amp_gain,temperature,";
+                    const header = "timestamp,integration_time,pre_amp_gain,temperature,read_mode,single_track_centre,single_track_height,";
                     data += header;
                     const firstLine = fileData.split('\n')[0];
-                    const columns = firstLine.split(',').length - 3; // -3 to exclude the first three columns
+                    const columns = firstLine.split(',').length - 7; // -3 to exclude the first three columns
                     for (let i = 0; i < columns; i++) {
                         data += `${i},`;
                     }
                     data = data.slice(0, -1) + '\n'; // Remove the last comma and add newline
-                } else if (device === 'TriOS') {
+                } else if (device.toLowerCase() === 'trios') {
                     // For TriOS, we assume the first line is the header
                     const firstLine = fileData.split('\n')[0];
                     data += firstLine + '\n'; // Add header from the first file
@@ -733,7 +735,7 @@ function concatFiles(device, files) {
                 headerAdded = true;
             }
 
-            if (device === 'TriOS') {
+            if (device.toLowerCase() === 'trios') {
                 // For TriOS, we skip the header line for subsequent files
                 const lines = fileData.split('\n');
                 for (let i = 1; i < lines.length; i++) { // Start from 1 to skip the header
@@ -762,7 +764,7 @@ function concatFiles(device, files) {
 function getDataDir(device) {
     if (device === 'hodr') {
         return '../hodr_data';
-    } else if (device === 'TriOS') {
+    } else if (device.toLowerCase() === 'trios') {
         return '../RAMSES_DATA';
     } else {
         throw new Error('Invalid device specified');
@@ -926,11 +928,15 @@ function sendStatusUpdate(ws) {
         propsIface.Get(interfaceName, 'active'),
         propsIface.Get(interfaceName, 'IntegrationTimeSecs'),
         propsIface.Get(interfaceName, 'acquisitionStatus'),
+        propsIface.Get(interfaceName, 'readMode'),
+        propsIface.Get(interfaceName, 'singleTrackCentre'),
+        propsIface.Get(interfaceName, 'singleTrackHeight'),
+        propsIface.Get(interfaceName, 'PreAmpGain'),
         propsIface.Get(interfaceName, 'numberSpectra'),
         propsIface.Get(interfaceName, 'wallclockInterval'),
         propsIface.Get(interfaceName, 'wallclockAcquisitionActive'),
         propsIface.Get(interfaceName, 'wallclockNextCapture')
-    ]).then(([temp, targetTemp, tempStatus, power, integrationTime, acqStatus, nSpectra, wallclockInterval, wallclockAcquisitionActive, wallclockNextCapture]) => {
+    ]).then(([temp, targetTemp, tempStatus, power, integrationTime, acqStatus, readMode, singleTrackCentre, singleTrackHeight, preAmpGain, nSpectra, wallclockInterval, wallclockAcquisitionActive, wallclockNextCapture]) => {
         let statusData = {
             temperature: temp.value,
             target_temperature: targetTemp.value,
@@ -938,6 +944,10 @@ function sendStatusUpdate(ws) {
             power_status: power.value,
             integration_time: integrationTime.value,
             acquisition_status: acqStatus.value,
+            read_mode: readMode.value,
+            single_track_centre: singleTrackCentre.value,
+            single_track_height: singleTrackHeight.value,
+            pre_amp_gain: preAmpGain.value,
             number_spectra: nSpectra.value,
             wallclock_interval: wallclockInterval.value,
             wallclock_acquisition_active: wallclockAcquisitionActive.value,
@@ -991,13 +1001,19 @@ wss.on('connection', (ws, request, client) => {
             }
             console.log('Received get_data request from client');
             iface.get_data().then((lastSpectrum) => {
+                console.log('Last spectrum data received:', lastSpectrum);
+
                 let spectrumData = {
                     timestamp: lastSpectrum[0],
                     integration_time: lastSpectrum[1],
                     pre_amp_gain: lastSpectrum[2],
                     temperature: lastSpectrum[3],
-                    data: lastSpectrum[4],
+                    read_mode: lastSpectrum[4],
+                    single_track_centre: lastSpectrum[5],
+                    single_track_height: lastSpectrum[6],
+                    data: lastSpectrum[7],
                 }
+                console.log('Last spectrum data to send:', spectrumData);
 
                 let message = {
                     header: "spectrum_data",

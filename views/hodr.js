@@ -1,3 +1,4 @@
+//import { read } from "fs";
 
 var currentTemperatureValue = null;
 var currentTargetTemperatureValue = null;
@@ -538,17 +539,35 @@ function handleStatusUpdate(status) {
     newNumberSpectra = status.number_spectra;
     newIntegrationTime = status.integration_time;
 
+    var preAmpGain = status.pre_amp_gain;
+    preampGainSelect.value = preAmpGain;
+
+    
+
     var wallclockNextCapture = status.wallclock_next_capture;
 
     wallclockAcquisitionInterval = status.wallclock_interval;
     wallclockAcquisitionActive = status.wallclock_acquisition_active;
     
+    var newReadMode = status.read_mode;
+    readModeSelect.value = status.read_mode;
+
+    var newSingleTrackCentre = status.single_track_centre;
+    singleTrackCentreInput.value = newSingleTrackCentre;
+
+    var newSingleTrackHeight = status.single_track_height;
+    singleTrackHeightInput.value = newSingleTrackHeight;
+
     console.log('New status data:', {
 
         newPowerStatus,
         newTemperature,
         newTargetTemperature,
         newAcquisitionStatus,
+        newReadMode,
+        newSingleTrackCentre,
+        newSingleTrackHeight,
+        preAmpGain,
         newIntegrationTime,
         newNumberSpectra,
         wallclockNextCapture,
@@ -861,6 +880,25 @@ function handleNewSpectrumData(spectrumData) {
         spectrumLastUpdated.textContent = spectrumData.timestamp;
         spectrumIntegrationTime.textContent = `${spectrumData.integration_time.toFixed(5)}`;
         spectrumPreAmpGain.textContent = `${spectrumData.pre_amp_gain.toFixed(1)}`;
+
+        switch (spectrumData.read_mode) {
+            case 0:
+                spectrumReadMode.textContent = 'Full Vertical Binning';
+                spectrumSingleTrackCentre.parentElement.parentElement.classList.add('hidden');
+                spectrumSingleTrackHeight.parentElement.parentElement.classList.add('hidden');
+                break;
+            case 3:
+                spectrumReadMode.textContent = 'Single Track';
+                spectrumSingleTrackCentre.parentElement.parentElement.classList.remove('hidden');
+                spectrumSingleTrackHeight.parentElement.parentElement.classList.remove('hidden');
+                
+                break;
+            default:
+                spectrumReadMode.textContent = `Unknown (${spectrumData.read_mode})`;
+        }
+        
+        spectrumSingleTrackCentre.textContent = `${spectrumData.single_track_centre}`;
+        spectrumSingleTrackHeight.textContent = `${spectrumData.single_track_height}`;
         spectrumMaxIntensity.textContent = `${Math.max(...intensities)}`;
         spectrumTemperature.textContent = `${spectrumData.temperature.toFixed(2)}`;
     } else {
@@ -1388,6 +1426,17 @@ function handlePropertiesChangedNotification(message) {
                     wallclockAcquisitionInterval = changedProperties[property].value;
                     handleWallclockIntervalUpdate(wallclockAcquisitionInterval);
                     break;
+                case 'readMode':
+                    readModeSelect.value = changedProperties[property].value;
+                    break;
+                case 'singleTrackCentre':
+                    singleTrackCentreInput.value = changedProperties[property].value;
+                    break;
+                case 'singleTrackHeight':
+                    singleTrackHeightInput.value = changedProperties[property].value;
+                    break;
+                case 'preAmpGain':
+                    preampGainSelect.value = changedProperties[property].value;
                 default:
                     console.log(`No handler for property: ${property}`);
             }
